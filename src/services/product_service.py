@@ -1,8 +1,10 @@
 # src/services/product_service.py
-from typing import List, Optional
+
+from typing import List, Optional, Dict, Any
 from src.database.db_connection import DatabaseConnection
 from src.models.product import Product
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import or_, and_
 
 class ProductService:
     def __init__(self):
@@ -96,5 +98,80 @@ class ProductService:
         session = self.db.get_session()
         try:
             return session.query(Product).filter(Product.stock_quantity <= threshold).all()
+        finally:
+            session.close()
+
+
+class AdvancedProductSearch:
+    def __init__(self):
+        self.db = DatabaseConnection()
+    
+    def search_products(self, 
+                        name: Optional[str] = None, 
+                        min_price: Optional[float] = None, 
+                        max_price: Optional[float] = None,
+                        category_id: Optional[int] = None,
+                        min_stock: Optional[int] = None,
+                        max_stock: Optional[int] = None) -> List[Product]:
+        """
+        Advanced product search with multiple filter options.
+        """
+        session = self.db.get_session()
+        try:
+            query = session.query(Product)
+            
+            # Name search (case-insensitive, partial match)
+            if name:
+                query = query.filter(Product.name.ilike(f'%{name}%'))
+            
+            # Price range filter
+            if min_price is not None:
+                query = query.filter(Product.price >= min_price)
+            if max_price is not None:
+                query = query.filter(Product.price <= max_price)
+            
+            # Category filter
+            if category_id is not None:
+                query = query.filter(Product.category_id == category_id)
+            
+            # Stock range filter
+            if min_stock is not None:
+                query = query.filter(Product.stock_quantity >= min_stock)
+            if max_stock is not None:
+                query = query.filter(Product.stock_quantity <= max_stock)
+            
+            return query.all()
+        finally:
+            session.close()
+    
+    def advanced_product_filter(self, filters: Dict[str, Any]) -> List[Product]:
+        """
+        Flexible product filtering based on multiple criteria.
+        """
+        session = self.db.get_session()
+        try:
+            query = session.query(Product)
+            
+            # Dynamic filtering based on provided criteria
+            for key, value in filters.items():
+                if hasattr(Product, key):
+                    # Exact match for most fields
+                    query = query.filter(getattr(Product, key) == value)
+            
+            return query.all()
+        finally:
+            session.close()
+    
+    def get_products_low_in_stock(self, threshold: int = 10, limit: int = 20) -> List[Product]:
+        """
+        Get products with stock below a certain threshold.
+        """
+        session = self.db.get_session()
+        try:
+            return (session.query(Product)
+                    .filter(Product.stock_quantity <= threshold)
+                    .order_by(Product.stock_quantity.asc())
+                    .limit(limit)
+                    .all())
         finally:
             session.close()
