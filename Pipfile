@@ -7,9 +7,12 @@ name = "pypi"
 sqlalchemy = "*"
 rich = "*"
 pytest = "*"
+python-dotenv = "*"
 
 [dev-packages]
+pytest = "*"
+mypy = "*"
+flake8 = "*"
 
 [requires]
 python_version = "3.9"
-python_full_version = "3.9.6"
