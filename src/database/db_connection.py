@@ -1,7 +1,12 @@
 # src/database/db_connection.py
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Create base class for declarative models
 Base = declarative_base()
@@ -17,8 +22,9 @@ class DatabaseConnection:
     
     def _setup_connection(self):
         try:
-            # Use SQLite database in the project root
-            self.engine = create_engine('sqlite:///inventory.db', echo=False)
+            # Use SQLite database with full path
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'inventory.db')
+            self.engine = create_engine(f'sqlite:///{db_path}', echo=False)
             self.Session = sessionmaker(bind=self.engine)
         except SQLAlchemyError as e:
             print(f"Database connection error: {e}")
@@ -29,3 +35,6 @@ class DatabaseConnection:
     
     def create_tables(self):
         Base.metadata.create_all(self.engine)
+    
+    def drop_tables(self):
+        Base.metadata.drop_all(self.engine)
